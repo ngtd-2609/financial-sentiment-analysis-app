@@ -6,7 +6,7 @@
 
 ## Demo
 
-- Link Streamlit: `https://financial-sentiment-analysis-app-yvxb78obotfhcappfbnsimm.streamlit.app/`
+- Link Streamlit: `https://financial-sentiment-analysis-ntd.streamlit.app/`
 
 ![Giao diện dự đoán câu](assets/app_preview.png)
 
