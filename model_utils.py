@@ -139,9 +139,9 @@ def analyze_pdf(model: Any, pdf_bytes: bytes) -> tuple[pd.DataFrame, dict[str, A
             "Noi dung cau": sentence,
             "Cam xuc": LABEL_EMOJI.get(display_label, display_label),
             "Do tin cay (%)": pred_conf,
-            "Tich cuc (%)": conf.get("Positive", 0.0),
-            "Trung lap (%)": conf.get("Neutral", 0.0),
-            "Tieu cuc (%)": conf.get("Negative", 0.0),
+            "Tich cuc (%)": scores.get("Positive", 0.0),
+            "Trung lap (%)": scores.get("Neutral", 0.0),
+            "Tieu cuc (%)": scores.get("Negative", 0.0),
             # Keep raw label for filtering
             "predicted_label": display_label,
         }
