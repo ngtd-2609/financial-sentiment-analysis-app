@@ -156,7 +156,7 @@ def main() -> None:
                 display_cols = ["STT", "Noi dung cau", "Cam xuc", "Do tin cay (%)"]
                 st.dataframe(df[display_cols].head(200), width="stretch", hide_index=True)
 
-                with st.expander("Chi tiet ky thuat (day du cot cho nguoi trong nganh)"):
+                with st.expander("Chi tiet ky thuat"):
                     st.caption(
                         "Bang day du bao gom: nhan ky thuat (Negative/Neutral/Positive), "
                         "do tin cay % (softmax tren decision score), "
