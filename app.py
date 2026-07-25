@@ -34,24 +34,23 @@ def load_app_metadata() -> dict:
     return load_metadata(METADATA_PATH)
 
 
-def load_gemini():
-    """Khởi tạo Gemini client từ Streamlit Secrets."""
+def load_groq():
+    """Khởi tạo Groq client từ Streamlit Secrets."""
     try:
-        import google.generativeai as genai
-        api_key = st.secrets.get("GEMINI_API_KEY", "")
+        from groq import Groq
+        api_key = st.secrets.get("GROQ_API_KEY", "")
         if not api_key:
             return None
-        genai.configure(api_key=api_key)
-        return genai.GenerativeModel("gemini-2.0-flash")
+        return Groq(api_key=api_key)
     except Exception:
         return None
 
 
-def ask_gemini(gemini_model, sentence: str, label: str, confidence: float) -> str:
-    """Gọi Gemini để giải thích kết quả phân loại."""
+def ask_groq(client, sentence: str, label: str, confidence: float) -> str:
+    """Gọi Groq để giải thích kết quả phân loại."""
     label_vi = {"Positive": "Tích cực", "Neutral": "Trung lập", "Negative": "Tiêu cực"}.get(label, label)
     prompt = f"""Bạn là chuyên gia phân tích ngôn ngữ tài chính.
-Mô hình NLP (TF-IDF + Linear SVM) vừa phân loại câu tiếng Anh sau đây là **{label_vi}** với độ tin cậy **{confidence:.1f}%**:
+Mô hình NLP (TF-IDF + Linear SVM) vừa phân loại câu tiếng Anh sau đây là {label_vi} với độ tin cậy {confidence:.1f}%:
 
 "{sentence}"
 
@@ -59,12 +58,16 @@ Hãy giải thích ngắn gọn (2-4 câu) bằng tiếng Việt:
 1. Tại sao câu này được coi là {label_vi}?
 2. Những từ/cụm từ nào trong câu cho thấy điều đó?
 
-Trả lời tự nhiên, dễ hiểu, không dùng markdown phức tạp."""
+Trả lời tự nhiên, dễ hiểu."""
     try:
-        response = gemini_model.generate_content(prompt)
-        return response.text.strip()
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=300,
+        )
+        return response.choices[0].message.content.strip()
     except Exception as exc:
-        return f"Không thể lấy giải thích từ Gemini: {exc}"
+        return f"Không thể lấy giải thích: {exc}"
 
 
 def show_metadata(metadata: dict) -> None:
@@ -100,7 +103,7 @@ def main() -> None:
             "hoặc mở notebook và chạy phần `Xuất mô hình để triển khai Streamlit`, sau đó commit file joblib lên GitHub."
         )
 
-    gemini_model = load_gemini()
+    llm = load_groq()
 
     tab_text, tab_pdf, tab_chat, tab_info = st.tabs([
         "Dự đoán một câu", "Phân tích PDF", "💬 Hỏi đáp (AI)", "Thông tin mô hình"
@@ -224,15 +227,15 @@ def main() -> None:
         st.subheader("💬 Hỏi đáp với AI")
         st.caption(
             "Nhập câu tài chính tiếng Anh — mô hình sẽ phân loại cảm xúc, "
-            "sau đó Gemini AI sẽ giải thích lý do bằng tiếng Việt."
+            "sau đó Groq AI sẽ giải thích lý do bằng tiếng Việt."
         )
 
         if not model_ready:
             st.error("Model chưa sẵn sàng. Vui lòng kiểm tra lại.")
-        elif gemini_model is None:
+        elif llm is None:
             st.warning(
-                "Chưa tìm thấy GEMINI_API_KEY trong Streamlit Secrets. "
-                "Vào Settings → Secrets và thêm: `GEMINI_API_KEY = \"key_cua_ban\"`"
+                "Chưa tìm thấy GROQ_API_KEY trong Streamlit Secrets. "
+                "Vào Settings → Secrets và thêm: GROQ_API_KEY = \"gsk_...\""
             )
         else:
             # Khởi tạo lịch sử chat
@@ -262,8 +265,8 @@ def main() -> None:
                     icon = color_map.get(label, "🔵")
 
                     # Gọi Gemini để giải thích
-                    with st.spinner("Gemini đang giải thích..."):
-                        explanation = ask_gemini(gemini_model, prompt, label, best_conf)
+                    with st.spinner("AI đang giải thích..."):
+                        explanation = ask_groq(llm, prompt, label, best_conf)
 
                     # Tạo phản hồi đầy đủ
                     reply = (
@@ -298,7 +301,7 @@ def main() -> None:
             - Không huấn luyện lại model khi người dùng truy cập.
             - PDF scan chưa được OCR trong phiên bản đầu.
             - "Độ tin cậy" được tính theo softmax trên điểm phân quyết của LinearSVM — là ước tính trực quan, không phải xác suất chính xác.
-            - Tab "Hỏi đáp" dùng Gemini 1.5 Flash để giải thích kết quả phân loại.
+            - Tab "Hỏi đáp" dùng Groq (LLaMA 3.3 70B) để giải thích kết quả phân loại.
             """
         )
 
