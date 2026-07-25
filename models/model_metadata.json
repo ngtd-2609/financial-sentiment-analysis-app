@@ -1,6 +1,6 @@
 {
   "project_name": "Financial Sentiment Analysis",
-  "model_name": "Linear SVM",
+  "model_name": "Logistic Regression",
   "vectorizer": "TF-IDF",
   "ngram_range": [
     1,
@@ -17,12 +17,12 @@
     "positive": 2
   },
   "selection_metric": "validation_macro_f1",
-  "validation_macro_f1": 0.7971,
-  "test_accuracy": 0.8649,
-  "test_macro_f1": 0.8115,
-  "test_macro_precision": 0.8853,
-  "test_macro_recall": 0.7697,
-  "test_weighted_f1": 0.8592,
+  "validation_macro_f1": 0.8058,
+  "test_accuracy": 0.8571,
+  "test_macro_f1": 0.8100,
+  "test_macro_precision": 0.8487,
+  "test_macro_recall": 0.7842,
+  "test_weighted_f1": 0.8545,
   "dataset_original_samples": 3453,
   "dataset_after_deduplication": 3448,
   "train_samples": 2412,

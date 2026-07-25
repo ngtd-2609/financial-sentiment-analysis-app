@@ -79,11 +79,112 @@ def show_metadata(metadata: dict) -> None:
     if not metadata:
         st.warning("Chưa có model_metadata.json hoặc file chưa đọc được.")
         return
-    cols = st.columns(3)
-    cols[0].metric("Validation Macro-F1", metadata.get("validation_macro_f1", "N/A"))
-    cols[1].metric("Test Accuracy", metadata.get("test_accuracy", "N/A"))
-    cols[2].metric("Test Macro-F1", metadata.get("test_macro_f1", "N/A"))
-    st.json(metadata, expanded=False)
+
+    def format_metric(key: str) -> str:
+        value = metadata.get(key)
+
+        if value is None:
+            return "N/A"
+
+        try:
+            return f"{float(value):.4f}"
+        except (TypeError, ValueError):
+            return str(value)
+
+    st.subheader("Kết quả đánh giá mô hình")
+
+    # Hàng chỉ số thứ nhất
+    cols_1 = st.columns(3)
+
+    cols_1[0].metric(
+        "Validation Macro-F1",
+        format_metric("validation_macro_f1")
+    )
+
+    cols_1[1].metric(
+        "Test Accuracy",
+        format_metric("test_accuracy")
+    )
+
+    cols_1[2].metric(
+        "Test Macro-F1",
+        format_metric("test_macro_f1")
+    )
+
+    # Hàng chỉ số thứ hai
+    cols_2 = st.columns(3)
+
+    cols_2[0].metric(
+        "Test Macro Precision",
+        format_metric("test_macro_precision")
+    )
+
+    cols_2[1].metric(
+        "Test Macro Recall",
+        format_metric("test_macro_recall")
+    )
+
+    cols_2[2].metric(
+        "Test Weighted-F1",
+        format_metric("test_weighted_f1")
+    )
+
+    st.divider()
+    st.subheader("Cấu hình mô hình")
+
+    info_col1, info_col2 = st.columns(2)
+
+    with info_col1:
+        st.write(
+            f"**Tên mô hình:** {metadata.get('model_name', 'N/A')}"
+        )
+        st.write(
+            f"**Vectorizer:** {metadata.get('vectorizer', 'N/A')}"
+        )
+        st.write(
+            f"**Tiêu chí lựa chọn:** "
+            f"{metadata.get('selection_metric', 'N/A')}"
+        )
+
+    with info_col2:
+        ngram_range = metadata.get("ngram_range", [])
+        labels = metadata.get("labels", [])
+
+        if isinstance(ngram_range, list):
+            ngram_text = " - ".join(map(str, ngram_range))
+        else:
+            ngram_text = str(ngram_range)
+
+        if isinstance(labels, list):
+            labels_text = ", ".join(labels)
+        else:
+            labels_text = str(labels)
+
+        st.write(f"**N-gram range:** {ngram_text}")
+        st.write(f"**Các nhãn:** {labels_text}")
+        st.write(
+            f"**Số mẫu kiểm thử:** "
+            f"{metadata.get('test_samples', 'N/A')}"
+        )
+
+    st.subheader("Thông tin dữ liệu")
+
+    data_cols = st.columns(3)
+
+    data_cols[0].metric(
+        "Dữ liệu ban đầu",
+        metadata.get("dataset_original_samples", "N/A")
+    )
+
+    data_cols[1].metric(
+        "Sau khi loại trùng",
+        metadata.get("dataset_after_deduplication", "N/A")
+    )
+
+    data_cols[2].metric(
+        "Dữ liệu huấn luyện",
+        metadata.get("training_samples", "N/A")
+    )
 
 
 def main() -> None:
