@@ -180,8 +180,8 @@ Nếu chưa có file model joblib, các test liên quan đến model sẽ đư�
 
 | Thành viên | Công việc | Tỷ trọng |
 |---|---|---:|
-| Nguyễn Tùng Dương | Dữ liệu, tiền xử lý, EDA và báo cáo | 34% |
-| Phạm Thế Duy | Mô hình, đánh giá, phân tích lỗi và xuất Pipeline triển khai | 33% |
+| Nguyễn Tùng Dương | Dữ liệu, tiền xử lý, EDA và báo cáo | 33% |
+| Phạm Thế Duy | Xây dựng baseline, huấn luyện, lựa chọn mô hình, đánh giá test, confusion matrix và phân tích lỗi | 33% |
 | Ngô Quang Thiện | Demo ứng dụng, PDF, slide và kiểm tra cuối | 33% |
 
 ## Tài liệu
