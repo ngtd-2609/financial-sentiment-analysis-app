@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,12 @@ LABEL_DISPLAY = {
     "Negative": "Negative",
     "Neutral": "Neutral",
     "Positive": "Positive",
+}
+
+LABEL_EMOJI = {
+    "Negative": "Tieu cuc",
+    "Neutral": "Trung lap",
+    "Positive": "Tich cuc",
 }
 
 VALID_LABELS = {"Negative", "Neutral", "Positive"}
@@ -51,6 +58,22 @@ def decision_scores(model: Any, texts: list[str]) -> list[dict[str, float]]:
         for row in raw:
             results.append({normalize_label(c): float(v) for c, v in zip(classes, row)})
     return results
+
+
+def softmax_confidence(scores: dict[str, float]) -> dict[str, float]:
+    """Convert raw decision scores to pseudo-probabilities via softmax.
+
+    This makes the output more intuitive for non-technical users.
+    Note: these are approximations, not calibrated probabilities.
+    """
+    if not scores:
+        return {}
+    vals = list(scores.values())
+    keys = list(scores.keys())
+    max_val = max(vals)
+    exps = [math.exp(v - max_val) for v in vals]  # numerically stable
+    total = sum(exps)
+    return {k: round(e / total * 100, 1) for k, e in zip(keys, exps)}
 
 
 def predict_sentence(model: Any, sentence: str) -> dict[str, Any]:
@@ -127,9 +150,21 @@ def analyze_pdf(model: Any, pdf_bytes: bytes) -> tuple[pd.DataFrame, dict[str, A
     score_list = decision_scores(model, sentences)
     rows = []
     for idx, (sentence, pred, scores) in enumerate(zip(sentences, preds, score_list), start=1):
-        row = {"sentence_index": idx, "sentence": sentence, "predicted_label": normalize_label(pred)}
-        for label, score in scores.items():
-            row[f"score_{label.lower()}"] = score
+        display_label = normalize_label(pred)
+        conf = softmax_confidence(scores)
+        # Confidence of the predicted label
+        pred_conf = conf.get(display_label, 0.0)
+        row = {
+            "STT": idx,
+            "Noi dung cau": sentence,
+            "Cam xuc": LABEL_EMOJI.get(display_label, display_label),
+            "Do tin cay (%)": pred_conf,
+            "Tich cuc (%)": conf.get("Positive", 0.0),
+            "Trung lap (%)": conf.get("Neutral", 0.0),
+            "Tieu cuc (%)": conf.get("Negative", 0.0),
+            # Keep raw label for CSV filtering
+            "predicted_label": display_label,
+        }
         rows.append(row)
     df = pd.DataFrame(rows)
     meta = {"page_count": page_count, "engine": engine, "sentence_count": len(df)}

@@ -6,7 +6,13 @@ import joblib
 import pandas as pd
 import streamlit as st
 
-from model_utils import analyze_pdf, load_metadata, normalize_label, predict_sentence
+from model_utils import (
+    analyze_pdf,
+    load_metadata,
+    normalize_label,
+    predict_sentence,
+    softmax_confidence,
+)
 
 ROOT = Path(__file__).parent
 MODEL_PATH = ROOT / "models" / "financial_sentiment_pipeline.joblib"
@@ -73,16 +79,29 @@ def main() -> None:
         selected = st.selectbox("Chọn câu ví dụ", ["Tự nhập"] + list(examples.keys()))
         default_text = examples.get(selected, "")
         sentence = st.text_area("Nhập câu tiếng Anh trong lĩnh vực tài chính", value=default_text, height=120)
-        if st.button("Phân tích câu", type="primary", disabled=not model_ready):
+        if st.button("Phan tich cau", type="primary", disabled=not model_ready):
             try:
                 result = predict_sentence(model, sentence)
-                st.success(f"Nhãn dự đoán: **{result['predicted_label']}**")
+                label = result["predicted_label"]
+                emoji_map = {"Positive": "Tich cuc", "Neutral": "Trung lap", "Negative": "Tieu cuc"}
+                display = emoji_map.get(label, label)
+                color_map = {"Positive": "green", "Neutral": "gray", "Negative": "red"}
+                color = color_map.get(label, "blue")
+                st.markdown(
+                    f"<h3 style='color:{color}'>Ket qua: {display}</h3>",
+                    unsafe_allow_html=True,
+                )
                 if result["scores"]:
-                    score_df = pd.DataFrame(
-                        [{"label": k, "decision_score": v} for k, v in result["scores"].items()]
-                    ).sort_values("decision_score", ascending=False)
-                    st.caption("Decision score không phải là xác suất.")
-                    st.dataframe(score_df, width="stretch", hide_index=True)
+                    conf = softmax_confidence(result["scores"])
+                    conf_df = pd.DataFrame(
+                        [{"Cam xuc": emoji_map.get(k, k), "Do tin cay (%)": v}
+                         for k, v in sorted(conf.items(), key=lambda x: -x[1])]
+                    )
+                    st.caption(
+                        "Do tin cay duoc tinh tu diem phan quyet cua mo hinh (Linear SVM), "
+                        "khong phai xac suat chinh thuc. Gia tri cang cao thi mo hinh cang chac chan ve nhan do."
+                    )
+                    st.dataframe(conf_df, width="stretch", hide_index=True)
             except Exception as exc:
                 st.warning(str(exc))
 
@@ -93,20 +112,36 @@ def main() -> None:
             st.write(f"File: `{uploaded.name}` - {uploaded.size / 1024 / 1024:.2f} MB")
         if st.button("Phân tích PDF", type="primary", disabled=(not model_ready or uploaded is None)):
             try:
-                with st.spinner("Đang trích xuất văn bản và dự đoán..."):
+                with st.spinner("Dang trich xuat van ban va du doan..."):
                     df, meta = analyze_pdf(model, uploaded.getvalue())
-                st.success(f"Đã phân tích {meta['sentence_count']:,} câu từ {meta['page_count']} trang bằng {meta['engine']}.")
-                summary = df["predicted_label"].value_counts().rename_axis("label").reset_index(name="count")
-                summary["ratio_percent"] = (summary["count"] / summary["count"].sum() * 100).round(2)
+                st.success(
+                    f"Da phan tich {meta['sentence_count']:,} cau "
+                    f"tu {meta['page_count']} trang (dung {meta['engine']})."
+                )
+
+                # --- Summary table (friendly) ---
+                summary_raw = df["predicted_label"].value_counts().rename_axis("predicted_label").reset_index(name="So luong")
+                emoji_map2 = {"Positive": "Tich cuc", "Neutral": "Trung lap", "Negative": "Tieu cuc"}
+                summary_raw["Cam xuc"] = summary_raw["predicted_label"].map(emoji_map2)
+                summary_raw["Ti le (%)"] = (summary_raw["So luong"] / summary_raw["So luong"].sum() * 100).round(1)
+                summary_display = summary_raw[["Cam xuc", "So luong", "Ti le (%)"]]
+
                 left, right = st.columns([1, 1])
                 with left:
-                    st.dataframe(summary, width="stretch", hide_index=True)
+                    st.markdown("**Tong hop cam xuc**")
+                    st.dataframe(summary_display, width="stretch", hide_index=True)
                 with right:
-                    st.bar_chart(summary.set_index("label")["count"])
-                st.subheader("Kết quả từng câu")
-                st.dataframe(df.head(200), width="stretch", hide_index=True)
+                    chart_data = summary_raw.set_index("Cam xuc")["So luong"]
+                    st.bar_chart(chart_data)
+
+                # --- Per-sentence table (friendly) ---
+                st.subheader("Ket qua tung cau")
+                display_cols = ["STT", "Noi dung cau", "Cam xuc", "Do tin cay (%)"]
+                st.dataframe(df[display_cols].head(200), width="stretch", hide_index=True)
+
+                # CSV export keeps all columns for analysis
                 st.download_button(
-                    "Tải CSV kết quả",
+                    "Tai CSV ket qua",
                     data=df.to_csv(index=False).encode("utf-8-sig"),
                     file_name="financial_sentiment_predictions.csv",
                     mime="text/csv",
@@ -119,13 +154,12 @@ def main() -> None:
         show_metadata(metadata)
         st.markdown(
             """
-            **Ghi chú triển khai**
-            - Ứng dụng tải model một lần bằng `st.cache_resource`.
-            - Không huấn luyện lại model khi người dùng truy cập.
-            - PDF scan chưa được OCR trong phiên bản đầu.
-            - Linear SVM chưa calibration nên app hiển thị decision score, không hiển thị xác suất.
-            """
-        )
+            **Ghi chu trien khai**
+            - Ung dung tai model mot lan bang `st.cache_resource`.
+            - Khong huan luyen lai model khi nguoi dung truy cap.
+            - PDF scan chua duoc OCR trong phien ban dau.
+            - "Do tin cay" duoc tinh theo softmax tren diem phan quyet cua LinearSVM — la uoc tinh truc quan, khong phai xac suat chinh xac.
+            """)
 
 
 if __name__ == "__main__":
