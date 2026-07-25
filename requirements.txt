@@ -6,3 +6,4 @@ joblib==1.5.3
 pymupdf
 pdfplumber
 pytest
+google-generativeai

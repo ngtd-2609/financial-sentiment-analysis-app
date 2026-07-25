@@ -34,6 +34,39 @@ def load_app_metadata() -> dict:
     return load_metadata(METADATA_PATH)
 
 
+def load_gemini():
+    """Khởi tạo Gemini client từ Streamlit Secrets."""
+    try:
+        import google.generativeai as genai
+        api_key = st.secrets.get("GEMINI_API_KEY", "")
+        if not api_key:
+            return None
+        genai.configure(api_key=api_key)
+        return genai.GenerativeModel("gemini-1.5-flash")
+    except Exception:
+        return None
+
+
+def ask_gemini(gemini_model, sentence: str, label: str, confidence: float) -> str:
+    """Gọi Gemini để giải thích kết quả phân loại."""
+    label_vi = {"Positive": "Tích cực", "Neutral": "Trung lập", "Negative": "Tiêu cực"}.get(label, label)
+    prompt = f"""Bạn là chuyên gia phân tích ngôn ngữ tài chính.
+Mô hình NLP (TF-IDF + Linear SVM) vừa phân loại câu tiếng Anh sau đây là **{label_vi}** với độ tin cậy **{confidence:.1f}%**:
+
+"{sentence}"
+
+Hãy giải thích ngắn gọn (2-4 câu) bằng tiếng Việt:
+1. Tại sao câu này được coi là {label_vi}?
+2. Những từ/cụm từ nào trong câu cho thấy điều đó?
+
+Trả lời tự nhiên, dễ hiểu, không dùng markdown phức tạp."""
+    try:
+        response = gemini_model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as exc:
+        return f"Không thể lấy giải thích từ Gemini: {exc}"
+
+
 def show_metadata(metadata: dict) -> None:
     if not metadata:
         st.warning("Chưa có model_metadata.json hoặc file chưa đọc được.")
@@ -67,7 +100,11 @@ def main() -> None:
             "hoặc mở notebook và chạy phần `Xuất mô hình để triển khai Streamlit`, sau đó commit file joblib lên GitHub."
         )
 
-    tab_text, tab_pdf, tab_info = st.tabs(["Dự đoán một câu", "Phân tích PDF", "Thông tin mô hình"])
+    gemini_model = load_gemini()
+
+    tab_text, tab_pdf, tab_chat, tab_info = st.tabs([
+        "Dự đoán một câu", "Phân tích PDF", "💬 Hỏi đáp (AI)", "Thông tin mô hình"
+    ])
 
     # ── Tab 1: Dự đoán một câu ──────────────────────────────────────────────
     with tab_text:
@@ -155,10 +192,8 @@ def main() -> None:
 
                 # --- Bảng từng câu (thân thiện) ---
                 st.subheader("Kết quả từng câu")
-                display_cols = ["STT", "Nội dung câu", "Cảm xúc", "Độ tin cậy (%)"]
-                # Đổi tên cột sang tiếng Việt có dấu để hiển thị
                 df_display = df[["STT", "Noi dung cau", "Cam xuc", "Do tin cay (%)"]].copy()
-                df_display.columns = display_cols
+                df_display.columns = ["STT", "Nội dung câu", "Cảm xúc", "Độ tin cậy (%)"]
                 st.dataframe(df_display.head(200), width="stretch", hide_index=True)
 
                 with st.expander("Chi tiết kỹ thuật"):
@@ -175,7 +210,6 @@ def main() -> None:
                     df_tech.columns = tech_cols_display
                     st.dataframe(df_tech.head(200), width="stretch", hide_index=True)
 
-                # CSV xuất đầy đủ cột để phân tích
                 st.download_button(
                     "Tải CSV kết quả",
                     data=df.to_csv(index=False).encode("utf-8-sig"),
@@ -185,7 +219,75 @@ def main() -> None:
             except Exception as exc:
                 st.warning(str(exc))
 
-    # ── Tab 3: Thông tin mô hình ─────────────────────────────────────────────
+    # ── Tab 3: Chatbot AI ────────────────────────────────────────────────────
+    with tab_chat:
+        st.subheader("💬 Hỏi đáp với AI")
+        st.caption(
+            "Nhập câu tài chính tiếng Anh — mô hình sẽ phân loại cảm xúc, "
+            "sau đó Gemini AI sẽ giải thích lý do bằng tiếng Việt."
+        )
+
+        if not model_ready:
+            st.error("Model chưa sẵn sàng. Vui lòng kiểm tra lại.")
+        elif gemini_model is None:
+            st.warning(
+                "Chưa tìm thấy GEMINI_API_KEY trong Streamlit Secrets. "
+                "Vào Settings → Secrets và thêm: `GEMINI_API_KEY = \"key_cua_ban\"`"
+            )
+        else:
+            # Khởi tạo lịch sử chat
+            if "chat_history" not in st.session_state:
+                st.session_state.chat_history = []
+
+            # Hiển thị lịch sử
+            for msg in st.session_state.chat_history:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+
+            # Ô nhập liệu
+            if prompt := st.chat_input("Nhập câu tài chính tiếng Anh..."):
+                # Hiển thị câu người dùng
+                with st.chat_message("user"):
+                    st.markdown(prompt)
+                st.session_state.chat_history.append({"role": "user", "content": prompt})
+
+                # Phân loại bằng model
+                try:
+                    result = predict_sentence(model, prompt)
+                    label = result["predicted_label"]
+                    conf = softmax_confidence(result["scores"])
+                    best_conf = conf.get(label, 0.0)
+                    label_vi = {"Positive": "Tích cực", "Neutral": "Trung lập", "Negative": "Tiêu cực"}.get(label, label)
+                    color_map = {"Positive": "🟢", "Neutral": "⚪", "Negative": "🔴"}
+                    icon = color_map.get(label, "🔵")
+
+                    # Gọi Gemini để giải thích
+                    with st.spinner("Gemini đang giải thích..."):
+                        explanation = ask_gemini(gemini_model, prompt, label, best_conf)
+
+                    # Tạo phản hồi đầy đủ
+                    reply = (
+                        f"{icon} **Kết quả: {label_vi}** (độ tin cậy: {best_conf:.1f}%)\n\n"
+                        f"{explanation}"
+                    )
+
+                    with st.chat_message("assistant"):
+                        st.markdown(reply)
+                    st.session_state.chat_history.append({"role": "assistant", "content": reply})
+
+                except Exception as exc:
+                    err_msg = f"Lỗi: {exc}"
+                    with st.chat_message("assistant"):
+                        st.warning(err_msg)
+                    st.session_state.chat_history.append({"role": "assistant", "content": err_msg})
+
+            # Nút xóa lịch sử
+            if st.session_state.get("chat_history"):
+                if st.button("🗑️ Xóa lịch sử chat"):
+                    st.session_state.chat_history = []
+                    st.rerun()
+
+    # ── Tab 4: Thông tin mô hình ─────────────────────────────────────────────
     with tab_info:
         st.subheader("Thông tin mô hình")
         show_metadata(metadata)
@@ -196,6 +298,7 @@ def main() -> None:
             - Không huấn luyện lại model khi người dùng truy cập.
             - PDF scan chưa được OCR trong phiên bản đầu.
             - "Độ tin cậy" được tính theo softmax trên điểm phân quyết của LinearSVM — là ước tính trực quan, không phải xác suất chính xác.
+            - Tab "Hỏi đáp" dùng Gemini 1.5 Flash để giải thích kết quả phân loại.
             """
         )
 
