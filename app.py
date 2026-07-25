@@ -102,6 +102,23 @@ def main() -> None:
                         "khong phai xac suat chinh thuc. Gia tri cang cao thi mo hinh cang chac chan ve nhan do."
                     )
                     st.dataframe(conf_df, width="stretch", hide_index=True)
+
+                    with st.expander("Chi tiet ky thuat (danh cho nguoi trong nganh)"):
+                        st.caption(
+                            "Decision score la diem phan quyet cua LinearSVC truoc khi phan nguong. "
+                            "Gia tri duong va lon hon thi nhan do duoc mo hinh uu tien hon. "
+                            "Day la diem tho, CHUA qua sigmoid/calibration nen khong phai xac suat."
+                        )
+                        raw_df = pd.DataFrame(
+                            [{"Label (ky thuat)": k, "Decision Score": round(v, 4)}
+                             for k, v in sorted(result["scores"].items(), key=lambda x: -x[1])]
+                        )
+                        st.dataframe(raw_df, width="stretch", hide_index=True)
+                        st.markdown(
+                            f"**Mo hinh:** LinearSVC | "
+                            f"**Vectorizer:** TF-IDF unigram+bigram | "
+                            f"**Predicted:** `{label}`"
+                        )
             except Exception as exc:
                 st.warning(str(exc))
 
@@ -138,6 +155,16 @@ def main() -> None:
                 st.subheader("Ket qua tung cau")
                 display_cols = ["STT", "Noi dung cau", "Cam xuc", "Do tin cay (%)"]
                 st.dataframe(df[display_cols].head(200), width="stretch", hide_index=True)
+
+                with st.expander("Chi tiet ky thuat (day du cot cho nguoi trong nganh)"):
+                    st.caption(
+                        "Bang day du bao gom: nhan ky thuat (Negative/Neutral/Positive), "
+                        "do tin cay % (softmax tren decision score), "
+                        "va diem % rieng le cua tung nhan."
+                    )
+                    tech_cols = ["STT", "Noi dung cau", "predicted_label",
+                                 "Do tin cay (%)", "Tich cuc (%)", "Trung lap (%)", "Tieu cuc (%)"]
+                    st.dataframe(df[tech_cols].head(200), width="stretch", hide_index=True)
 
                 # CSV export keeps all columns for analysis
                 st.download_button(
