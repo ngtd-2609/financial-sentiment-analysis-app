@@ -55,7 +55,7 @@ def ask_groq(client, sentence: str, label: str, confidence: float) -> str:
     """Gọi Groq để giải thích kết quả phân loại."""
     label_vi = {"Positive": "Tích cực", "Neutral": "Trung lập", "Negative": "Tiêu cực"}.get(label, label)
     prompt = f"""Bạn là chuyên gia phân tích ngôn ngữ tài chính.
-Mô hình NLP (TF-IDF + Linear SVM) vừa phân loại câu tiếng Anh sau đây là {label_vi} với độ tin cậy {confidence:.1f}%:
+Mô hình NLP (TF-IDF + Linear Regression) vừa phân loại câu tiếng Anh sau đây là {label_vi} với độ tin cậy {confidence:.1f}%:
 
 "{sentence}"
 

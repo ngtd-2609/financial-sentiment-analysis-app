@@ -2,7 +2,9 @@
 
 Thư mục này chứa model deploy và metadata.
 
-- `financial_sentiment_pipeline.joblib` — Pipeline TF-IDF + Linear SVM, huấn luyện trên train + validation (2.930 câu).
+- `financial_sentiment_pipeline.joblib` — Pipeline TF-IDF +
+  Logistic Regression, được huấn luyện trên tập train và validation
+  gồm tổng cộng 2.930 câu.
 - `model_metadata.json` — Thông tin model, phiên bản, và kết quả đánh giá.
 
 Để tạo lại model:
@@ -11,4 +13,4 @@ Thư mục này chứa model deploy và metadata.
 python scripts/train_export_model.py
 ```
 
-hoặc mở `notebook/Financial_Sentiment_Analysis_Application.ipynb` và chạy toàn bộ notebook.
+hoặc mở `notebook/Financial_Sentiment_Analysis_Fixed_collab.ipynb` và chạy toàn bộ notebook.

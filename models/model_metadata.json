@@ -1,6 +1,9 @@
 {
   "project_name": "Financial Sentiment Analysis",
   "model_name": "Logistic Regression",
+  "best_parameters": {
+    "classifier__C": 10.0
+  },
   "vectorizer": "TF-IDF",
   "ngram_range": [
     1,
@@ -17,12 +20,12 @@
     "positive": 2
   },
   "selection_metric": "validation_macro_f1",
-  "validation_macro_f1": 0.8058,
-  "test_accuracy": 0.8571,
-  "test_macro_f1": 0.8100,
-  "test_macro_precision": 0.8487,
-  "test_macro_recall": 0.7842,
-  "test_weighted_f1": 0.8545,
+  "validation_macro_f1": 0.808,
+  "test_accuracy": 0.8591,
+  "test_macro_f1": 0.8147,
+  "test_macro_precision": 0.8514,
+  "test_macro_recall": 0.7895,
+  "test_weighted_f1": 0.8567,
   "dataset_original_samples": 3453,
   "dataset_after_deduplication": 3448,
   "train_samples": 2412,
@@ -33,5 +36,5 @@
   "scikit_learn_version": "1.8.0",
   "joblib_version": "1.5.3",
   "created_from_script": "scripts/train_export_model.py",
-  "created_from_notebook": "Financial_Sentiment_Analysis_Application.ipynb"
+  "created_from_notebook": "notebook/Financial_Sentiment_Analysis_Fixed_collab.ipynb"
 }

@@ -18,15 +18,19 @@
 
 ![Giao diện dự đoán câu](assets/app_preview.png)
 
-## Kết quả mô hình (tham khảo)
+## Kết quả mô hình Logistic Regression
 
-| Metric | Giá trị |
+| Chỉ số | Giá trị |
 |---|---:|
-| Validation Macro-F1 | 0.7971 |
-| Test Accuracy | 0.8649 |
-| Test Macro-F1 | 0.8115 |
+| Validation Macro-F1 | 0.8058 |
+| Test Accuracy | 0.8571 |
+| Test Macro-F1 | 0.8100 |
+| Test Macro Precision | 0.8487 |
+| Test Macro Recall | 0.7842 |
+| Test Weighted-F1 | 0.8545 |
 
-*(Ghi chú: Bảng trên là kết quả tham khảo từ baseline, xem chi tiết đánh giá Logistic Regression trong notebook)*
+Các chỉ số trên được lấy từ kết quả đánh giá mô hình Logistic Regression
+trong notebook của dự án.
 
 ## Kiến trúc
 
@@ -54,7 +58,7 @@ financial-sentiment-analysis-app/
 │   ├── financial_sentiment_pipeline.joblib   # tạo sau khi chạy notebook/script
 │   └── model_metadata.json
 ├── notebook/
-│   └── Financial_Sentiment_Analysis_Application.ipynb
+│   └── Financial_Sentiment_Analysis_Fixed_collab.ipynb
 ├── assets/
 ├── sample_data/
 ├── docs/
@@ -152,7 +156,7 @@ Nhập một câu tài chính tiếng Anh, ví dụ:
 Revenue increased by 20 percent compared with the previous year.
 ```
 
-Ứng dụng trả về nhãn dự đoán và decision score nếu mô hình hỗ trợ. Với Linear SVM, decision score **không phải xác suất**.
+Ứng dụng trả về nhãn dự đoán và xác suất của từng lớp. Các xác suất được lấy trực tiếp từ phương thức `predict_proba` của mô hình Logistic Regression.
 
 ### Phân tích PDF
 
@@ -171,7 +175,10 @@ Nếu chưa có file model joblib, các test liên quan đến model sẽ đư�
 ## Hạn chế
 
 - Mô hình huấn luyện trên câu tài chính tiếng Anh, chưa tối ưu cho tiếng Việt.
-- Linear SVM không cung cấp xác suất chuẩn nếu chưa calibration.
+- Logistic Regression cung cấp xác suất dự đoán, tuy nhiên xác suất này
+  không nên được xem là mức bảo đảm tuyệt đối về tính chính xác.
+- Biểu diễn TF-IDF còn hạn chế trong việc nắm bắt ngữ cảnh dài,
+  hàm ý và các quan hệ ngữ nghĩa phức tạp.
 - PDF scan cần OCR, chưa hỗ trợ tự động trong phiên bản đầu.
 - Có domain shift giữa Financial PhraseBank và báo cáo thường niên.
 - Kết quả không phải khuyến nghị đầu tư.
@@ -188,7 +195,7 @@ Nếu chưa có file model joblib, các test liên quan đến model sẽ đư�
 
 - Báo cáo: `docs/Bao_Cao_NLP_Theo_Huong_Ung_Dung.docx`
 - Slide: `docs/Slide_NLP_Theo_Huong_Ung_Dung.pptx`
-- Notebook: `notebook/Financial_Sentiment_Analysis_Application.ipynb`
+- Notebook: `notebook/Financial_Sentiment_Analysis_Fixed_collab.ipynb`
 - Câu hỏi bảo vệ: `docs/Cau_Hoi_Bao_Ve.docx`
 
 ## Ghi chú bản quyền dữ liệu
