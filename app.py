@@ -11,7 +11,6 @@ from model_utils import (
     load_metadata,
     normalize_label,
     predict_sentence,
-    softmax_confidence,
 )
 
 ROOT = Path(__file__).parent
@@ -107,7 +106,7 @@ def main() -> None:
     """, unsafe_allow_html=True)
 
     st.title("Financial Sentiment Analysis")
-    st.caption("Phân tích cảm xúc câu tài chính và báo cáo PDF bằng TF-IDF + Linear SVM")
+    st.caption("Phân tích cảm xúc câu tài chính và báo cáo PDF bằng TF-IDF + Logistic Regression")
     st.info(
         "Kết quả chỉ phản ánh sắc thái ngôn ngữ trong văn bản và không phải là khuyến nghị đầu tư "
         "hoặc đánh giá toàn diện sức khỏe tài chính của doanh nghiệp."
@@ -160,7 +159,7 @@ def main() -> None:
                 try:
                     result = predict_sentence(model, prompt)
                     label = result["predicted_label"]
-                    conf = softmax_confidence(result["scores"])
+                    conf = result["scores"]
                     best_conf = conf.get(label, 0.0)
                     label_vi = {"Positive": "Tích cực", "Neutral": "Trung lập", "Negative": "Tiêu cực"}.get(label, label)
                     icon = {"Positive": "🟢", "Neutral": "⚪", "Negative": "🔴"}.get(label, "🔵")
@@ -208,30 +207,28 @@ def main() -> None:
                     unsafe_allow_html=True,
                 )
                 if result["scores"]:
-                    conf = softmax_confidence(result["scores"])
+                    conf = result["scores"]
                     conf_df = pd.DataFrame(
-                        [{"Cảm xúc": emoji_map.get(k, k), "Độ tin cậy (%)": v}
+                        [{"Cảm xúc": emoji_map.get(k, k), "Xác suất (%)": v}
                          for k, v in sorted(conf.items(), key=lambda x: -x[1])]
                     )
                     st.caption(
-                        "Độ tin cậy được tính từ điểm phân quyết của mô hình (Linear SVM), "
-                        "không phải xác suất chính thức. Giá trị càng cao thì mô hình càng chắc chắn về nhãn đó."
+                        "Độ tin cậy được trích xuất trực tiếp từ dự đoán của mô hình Logistic Regression."
                     )
                     st.dataframe(conf_df, width="stretch", hide_index=True)
 
                     with st.expander("Chi tiết kỹ thuật"):
                         st.caption(
-                            "Decision score là điểm phân quyết của LinearSVC trước khi phân ngưỡng. "
-                            "Giá trị dương và lớn hơn thì nhãn đó được mô hình ưu tiên hơn. "
-                            "Đây là điểm thô, CHƯA qua sigmoid/calibration nên không phải xác suất."
+                            "Bảng xác suất thô (predict_proba) từ Logistic Regression. "
+                            "Giá trị cao nhất tương ứng với nhãn được chọn."
                         )
                         raw_df = pd.DataFrame(
-                            [{"Nhãn": k, "Decision Score": round(v, 4)}
+                            [{"Nhãn": k, "Xác suất (%)": round(v, 4)}
                              for k, v in sorted(result["scores"].items(), key=lambda x: -x[1])]
                         )
                         st.dataframe(raw_df, width="stretch", hide_index=True)
                         st.markdown(
-                            f"**Mô hình:** LinearSVC | "
+                            f"**Mô hình:** Logistic Regression | "
                             f"**Vectorizer:** TF-IDF unigram+bigram | "
                             f"**Nhãn dự đoán:** `{label}`"
                         )
@@ -277,8 +274,7 @@ def main() -> None:
                 with st.expander("Chi tiết kỹ thuật"):
                     st.caption(
                         "Bảng đầy đủ bao gồm: nhãn kỹ thuật (Negative/Neutral/Positive), "
-                        "độ tin cậy % (softmax trên decision score), "
-                        "và điểm % riêng lẻ của từng nhãn."
+                        "và xác suất (%) dự đoán cho từng nhãn từ Logistic Regression."
                     )
                     tech_cols_src = ["STT", "Noi dung cau", "predicted_label",
                                      "Do tin cay (%)", "Tich cuc (%)", "Trung lap (%)", "Tieu cuc (%)"]
@@ -307,7 +303,7 @@ def main() -> None:
             - Ứng dụng tải model một lần bằng `st.cache_resource`.
             - Không huấn luyện lại model khi người dùng truy cập.
             - PDF scan chưa được OCR trong phiên bản đầu.
-            - "Độ tin cậy" được tính theo softmax trên điểm phân quyết của LinearSVM — là ước tính trực quan, không phải xác suất chính xác.
+            - "Độ tin cậy" được tính bằng xác suất trực tiếp từ Logistic Regression (predict_proba).
             - Tab "Hỏi đáp" dùng Groq (LLaMA 3.3 70B) để giải thích kết quả phân loại.
             """
         )

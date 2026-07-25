@@ -41,39 +41,20 @@ def get_classifier(model: Any) -> Any:
     return model
 
 
-def decision_scores(model: Any, texts: list[str]) -> list[dict[str, float]]:
-    """Return decision scores if available. These are not probabilities."""
-    if not hasattr(model, "decision_function"):
+def probabilities(model: Any, texts: list[str]) -> list[dict[str, float]]:
+    """Return probability scores from Logistic Regression."""
+    if not hasattr(model, "predict_proba"):
         return [{} for _ in texts]
-    raw = model.decision_function(texts)
+    raw_probs = model.predict_proba(texts)
     classifier = get_classifier(model)
     classes = list(getattr(classifier, "classes_", []))
     if not classes:
         classes = ["negative", "neutral", "positive"]
     results: list[dict[str, float]] = []
-    if getattr(raw, "ndim", 1) == 1:
-        for value in raw:
-            results.append({"score": float(value)})
-    else:
-        for row in raw:
-            results.append({normalize_label(c): float(v) for c, v in zip(classes, row)})
+    for row in raw_probs:
+        # Convert to percentage
+        results.append({normalize_label(c): round(float(v) * 100, 1) for c, v in zip(classes, row)})
     return results
-
-
-def softmax_confidence(scores: dict[str, float]) -> dict[str, float]:
-    """Convert raw decision scores to pseudo-probabilities via softmax.
-
-    This makes the output more intuitive for non-technical users.
-    Note: these are approximations, not calibrated probabilities.
-    """
-    if not scores:
-        return {}
-    vals = list(scores.values())
-    keys = list(scores.keys())
-    max_val = max(vals)
-    exps = [math.exp(v - max_val) for v in vals]  # numerically stable
-    total = sum(exps)
-    return {k: round(e / total * 100, 1) for k, e in zip(keys, exps)}
 
 
 def predict_sentence(model: Any, sentence: str) -> dict[str, Any]:
@@ -82,7 +63,7 @@ def predict_sentence(model: Any, sentence: str) -> dict[str, Any]:
     if not text:
         raise ValueError("Nội dung câu đang trống.")
     pred = model.predict([text])[0]
-    scores = decision_scores(model, [text])[0]
+    scores = probabilities(model, [text])[0]
     return {"sentence": text, "predicted_label": normalize_label(pred), "scores": scores}
 
 
@@ -147,13 +128,12 @@ def analyze_pdf(model: Any, pdf_bytes: bytes) -> tuple[pd.DataFrame, dict[str, A
     if not sentences:
         raise ValueError("Không tìm thấy câu hợp lệ. PDF có thể là bản scan hoặc quá nhiều bảng biểu.")
     preds = model.predict(sentences)
-    score_list = decision_scores(model, sentences)
+    score_list = probabilities(model, sentences)
     rows = []
     for idx, (sentence, pred, scores) in enumerate(zip(sentences, preds, score_list), start=1):
         display_label = normalize_label(pred)
-        conf = softmax_confidence(scores)
         # Confidence of the predicted label
-        pred_conf = conf.get(display_label, 0.0)
+        pred_conf = scores.get(display_label, 0.0)
         row = {
             "STT": idx,
             "Noi dung cau": sentence,

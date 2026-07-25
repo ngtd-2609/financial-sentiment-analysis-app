@@ -204,10 +204,10 @@ def main():
     deploy_train = pd.concat([train_df, val_df], ignore_index=True)
     print(f"Training samples for deployment: {len(deploy_train):,} (train + validation)")
 
-    # Tạo pipeline mới (không dùng lại pipeline đã fit)
+    # Tạo pipeline mới (dùng Logistic Regression theo notebook)
     final_pipeline = Pipeline([
         ("tfidf", TfidfVectorizer(ngram_range=(1, 2), min_df=2)),
-        ("classifier", LinearSVC(random_state=SEED)),
+        ("classifier", LogisticRegression(max_iter=1000, random_state=SEED)),
     ])
     final_pipeline.fit(deploy_train["sentence"], deploy_train["label"])
 

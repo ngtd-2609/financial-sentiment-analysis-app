@@ -1,6 +1,6 @@
 # Financial Sentiment Analysis Application
 
-Ứng dụng NLP phân loại cảm xúc câu tài chính thành ba nhãn: **Negative**, **Neutral** và **Positive**. Bản deploy sử dụng pipeline **TF-IDF + Linear SVM**, được chọn bằng **validation Macro-F1** trong notebook huấn luyện.
+Ứng dụng NLP phân loại cảm xúc câu tài chính thành ba nhãn: **Negative**, **Neutral** và **Positive**. Bản deploy sử dụng pipeline **TF-IDF + Logistic Regression**, đồng bộ với kết quả tốt nhất từ notebook.
 
 ## Tác giả
 
@@ -18,7 +18,7 @@
 
 ![Giao diện dự đoán câu](assets/app_preview.png)
 
-## Kết quả mô hình
+## Kết quả mô hình (tham khảo)
 
 | Metric | Giá trị |
 |---|---:|
@@ -26,13 +26,15 @@
 | Test Accuracy | 0.8649 |
 | Test Macro-F1 | 0.8115 |
 
+*(Ghi chú: Bảng trên là kết quả tham khảo từ baseline, xem chi tiết đánh giá Logistic Regression trong notebook)*
+
 ## Kiến trúc
 
 ```text
 Financial PhraseBank
     -> kiểm tra và tiền xử lý
     -> TF-IDF unigram/bigram
-    -> Linear SVM
+    -> Logistic Regression
     -> dự đoán câu tài chính hoặc câu trích từ PDF
 ```
 
