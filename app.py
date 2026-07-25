@@ -42,16 +42,7 @@ def load_gemini():
         if not api_key:
             return None
         genai.configure(api_key=api_key)
-        # Thử lần lượt các model, ưu tiên model mới nhất
-        for model_name in ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-pro"]:
-            try:
-                m = genai.GenerativeModel(model_name)
-                # Gọi thử để xác nhận model khả dụng
-                m.generate_content("hi")
-                return m
-            except Exception:
-                continue
-        return None
+        return genai.GenerativeModel("gemini-2.0-flash")
     except Exception:
         return None
 
