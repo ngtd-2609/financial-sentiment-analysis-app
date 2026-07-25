@@ -1,0 +1,8 @@
+streamlit==1.60.0
+pandas
+numpy
+scikit-learn==1.8.0
+joblib==1.5.3
+pymupdf
+pdfplumber
+pytest
