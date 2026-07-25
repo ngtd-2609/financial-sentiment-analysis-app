@@ -58,7 +58,7 @@ financial-sentiment-analysis-app/
 ## Cài đặt local
 
 ```bash
-git clone [REPOSITORY_URL]
+git clone https://github.com/ngtd-2609/financial-sentiment-analysis-app.git
 cd financial-sentiment-analysis-app
 python -m venv .venv
 ```
@@ -128,7 +128,7 @@ git init
 git add .
 git commit -m "Initial financial sentiment application"
 git branch -M main
-git remote add origin [REPOSITORY_URL]
+git remote add origin https://github.com/ngtd-2609/financial-sentiment-analysis-app.git
 git push -u origin main
 ```
 
