@@ -83,6 +83,29 @@ def show_metadata(metadata: dict) -> None:
 
 def main() -> None:
     st.set_page_config(page_title="Financial Sentiment Analysis", page_icon="📊", layout="wide")
+
+    # CSS tùy chỉnh cho sidebar trông như chat panel
+    st.markdown("""
+    <style>
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #1e1e2e 0%, #16213e 100%);
+        min-width: 340px !important;
+        max-width: 340px !important;
+    }
+    [data-testid="stSidebar"] * { color: #e2e8f0 !important; }
+    [data-testid="stSidebar"] .stChatMessage {
+        background: rgba(255,255,255,0.05) !important;
+        border-radius: 12px;
+        margin-bottom: 8px;
+    }
+    [data-testid="stSidebar"] input { background: #2d2d44 !important; border-radius: 20px !important; }
+    [data-testid="stSidebarCollapsedControl"] {
+        background: #6366f1 !important;
+        border-radius: 0 12px 12px 0 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     st.title("Financial Sentiment Analysis")
     st.caption("Phân tích cảm xúc câu tài chính và báo cáo PDF bằng TF-IDF + Linear SVM")
     st.info(
@@ -105,9 +128,61 @@ def main() -> None:
 
     llm = load_groq()
 
-    tab_text, tab_pdf, tab_chat, tab_info = st.tabs([
-        "Dự đoán một câu", "Phân tích PDF", "💬 Hỏi đáp (AI)", "Thông tin mô hình"
+    tab_text, tab_pdf, tab_info = st.tabs([
+        "Dự đoán một câu", "Phân tích PDF", "Thông tin mô hình"
     ])
+
+    # ── Sidebar: Chat panel ──────────────────────────────────────────────────
+    with st.sidebar:
+        st.markdown("## 💬 Hỏi đáp với AI")
+        st.caption("Nhập câu tài chính tiếng Anh để phân tích và giải thích.")
+        st.divider()
+
+        if not model_ready:
+            st.error("Model chưa sẵn sàng.")
+        elif llm is None:
+            st.warning("Thiếu GROQ_API_KEY trong Secrets.")
+        else:
+            if "chat_history" not in st.session_state:
+                st.session_state.chat_history = []
+
+            # Hiển thị lịch sử chat
+            for msg in st.session_state.chat_history:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+
+            # Ô nhập liệu
+            if prompt := st.chat_input("Nhập câu tiếng Anh..."):
+                with st.chat_message("user"):
+                    st.markdown(prompt)
+                st.session_state.chat_history.append({"role": "user", "content": prompt})
+
+                try:
+                    result = predict_sentence(model, prompt)
+                    label = result["predicted_label"]
+                    conf = softmax_confidence(result["scores"])
+                    best_conf = conf.get(label, 0.0)
+                    label_vi = {"Positive": "Tích cực", "Neutral": "Trung lập", "Negative": "Tiêu cực"}.get(label, label)
+                    icon = {"Positive": "🟢", "Neutral": "⚪", "Negative": "🔴"}.get(label, "🔵")
+
+                    with st.spinner("AI đang giải thích..."):
+                        explanation = ask_groq(llm, prompt, label, best_conf)
+
+                    reply = (
+                        f"{icon} **{label_vi}** ({best_conf:.1f}%)\n\n"
+                        f"{explanation}"
+                    )
+                    with st.chat_message("assistant"):
+                        st.markdown(reply)
+                    st.session_state.chat_history.append({"role": "assistant", "content": reply})
+
+                except Exception as exc:
+                    st.warning(str(exc))
+
+            if st.session_state.get("chat_history"):
+                if st.button("🗑️ Xóa lịch sử", use_container_width=True):
+                    st.session_state.chat_history = []
+                    st.rerun()
 
     # ── Tab 1: Dự đoán một câu ──────────────────────────────────────────────
     with tab_text:
@@ -222,75 +297,7 @@ def main() -> None:
             except Exception as exc:
                 st.warning(str(exc))
 
-    # ── Tab 3: Chatbot AI ────────────────────────────────────────────────────
-    with tab_chat:
-        st.subheader("💬 Hỏi đáp với AI")
-        st.caption(
-            "Nhập câu tài chính tiếng Anh — mô hình sẽ phân loại cảm xúc, "
-            "sau đó Groq AI sẽ giải thích lý do bằng tiếng Việt."
-        )
-
-        if not model_ready:
-            st.error("Model chưa sẵn sàng. Vui lòng kiểm tra lại.")
-        elif llm is None:
-            st.warning(
-                "Chưa tìm thấy GROQ_API_KEY trong Streamlit Secrets. "
-                "Vào Settings → Secrets và thêm: GROQ_API_KEY = \"gsk_...\""
-            )
-        else:
-            # Khởi tạo lịch sử chat
-            if "chat_history" not in st.session_state:
-                st.session_state.chat_history = []
-
-            # Hiển thị lịch sử
-            for msg in st.session_state.chat_history:
-                with st.chat_message(msg["role"]):
-                    st.markdown(msg["content"])
-
-            # Ô nhập liệu
-            if prompt := st.chat_input("Nhập câu tài chính tiếng Anh..."):
-                # Hiển thị câu người dùng
-                with st.chat_message("user"):
-                    st.markdown(prompt)
-                st.session_state.chat_history.append({"role": "user", "content": prompt})
-
-                # Phân loại bằng model
-                try:
-                    result = predict_sentence(model, prompt)
-                    label = result["predicted_label"]
-                    conf = softmax_confidence(result["scores"])
-                    best_conf = conf.get(label, 0.0)
-                    label_vi = {"Positive": "Tích cực", "Neutral": "Trung lập", "Negative": "Tiêu cực"}.get(label, label)
-                    color_map = {"Positive": "🟢", "Neutral": "⚪", "Negative": "🔴"}
-                    icon = color_map.get(label, "🔵")
-
-                    # Gọi Gemini để giải thích
-                    with st.spinner("AI đang giải thích..."):
-                        explanation = ask_groq(llm, prompt, label, best_conf)
-
-                    # Tạo phản hồi đầy đủ
-                    reply = (
-                        f"{icon} **Kết quả: {label_vi}** (độ tin cậy: {best_conf:.1f}%)\n\n"
-                        f"{explanation}"
-                    )
-
-                    with st.chat_message("assistant"):
-                        st.markdown(reply)
-                    st.session_state.chat_history.append({"role": "assistant", "content": reply})
-
-                except Exception as exc:
-                    err_msg = f"Lỗi: {exc}"
-                    with st.chat_message("assistant"):
-                        st.warning(err_msg)
-                    st.session_state.chat_history.append({"role": "assistant", "content": err_msg})
-
-            # Nút xóa lịch sử
-            if st.session_state.get("chat_history"):
-                if st.button("🗑️ Xóa lịch sử chat"):
-                    st.session_state.chat_history = []
-                    st.rerun()
-
-    # ── Tab 4: Thông tin mô hình ─────────────────────────────────────────────
+    # ── Tab 3: Thông tin mô hình ─────────────────────────────────────────────
     with tab_info:
         st.subheader("Thông tin mô hình")
         show_metadata(metadata)
