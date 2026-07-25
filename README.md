@@ -6,7 +6,7 @@
 
 ## Demo
 
-- Link Streamlit: `[STREAMLIT_APP_URL]`
+- Link Streamlit: `https://financial-sentiment-analysis-app-yvxb78obotfhcappfbnsimm.streamlit.app/`
 
 ![Giao diện dự đoán câu](assets/app_preview.png)
 
@@ -68,7 +68,7 @@ Yêu cầu Python 3.12+ (đã test với Python 3.13.5).
 Windows:
 
 ```bash
-.venv\Scriptsctivate
+.venv\Scripts\activate
 ```
 
 macOS/Linux:
