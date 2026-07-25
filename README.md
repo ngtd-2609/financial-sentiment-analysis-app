@@ -2,6 +2,14 @@
 
 Ứng dụng NLP phân loại cảm xúc câu tài chính thành ba nhãn: **Negative**, **Neutral** và **Positive**. Bản deploy sử dụng pipeline **TF-IDF + Linear SVM**, được chọn bằng **validation Macro-F1** trong notebook huấn luyện.
 
+## Tác giả
+
+| Họ tên | GitHub |
+|---|---|
+| Nguyễn Tùng Dương | [@ngtd-2609](https://github.com/ngtd-2609) |
+| Phạm Thế Duy | [@duyphamdevx](https://github.com/duyphamdevx) |
+| Ngô Quang Thiện | [@thyelmot](https://github.com/thyelmot) |
+
 > Kết quả chỉ phản ánh sắc thái ngôn ngữ trong văn bản và không phải khuyến nghị đầu tư hoặc đánh giá toàn diện sức khỏe tài chính của doanh nghiệp.
 
 ## Demo
@@ -184,3 +192,12 @@ Nếu chưa có file model joblib, các test liên quan đến model sẽ đư�
 ## Ghi chú bản quyền dữ liệu
 
 Mã nguồn do nhóm xây dựng có thể dùng theo MIT License. Dataset Financial PhraseBank và các báo cáo doanh nghiệp có điều khoản sử dụng riêng; repository không tuyên bố sở hữu các nguồn dữ liệu này.
+
+## Hướng dẫn đồng tác giả fork repo
+
+Các thành viên [@duyphamdevx](https://github.com/duyphamdevx) và [@thyelmot](https://github.com/thyelmot) có thể thêm repo này vào GitHub cá nhân bằng cách:
+
+1. Vào trang repo: https://github.com/ngtd-2609/financial-sentiment-analysis-app
+2. Bấm nút **Fork** (góc trên phải)
+3. Chọn tài khoản cá nhân → bấm **Create fork**
+4. Repo sẽ xuất hiện tại `https://github.com/<username>/financial-sentiment-analysis-app`
