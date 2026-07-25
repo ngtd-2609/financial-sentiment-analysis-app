@@ -69,6 +69,7 @@ def main() -> None:
 
     tab_text, tab_pdf, tab_info = st.tabs(["Dự đoán một câu", "Phân tích PDF", "Thông tin mô hình"])
 
+    # ── Tab 1: Dự đoán một câu ──────────────────────────────────────────────
     with tab_text:
         st.subheader("Dự đoán cảm xúc một câu tài chính")
         examples = {
@@ -79,49 +80,50 @@ def main() -> None:
         selected = st.selectbox("Chọn câu ví dụ", ["Tự nhập"] + list(examples.keys()))
         default_text = examples.get(selected, "")
         sentence = st.text_area("Nhập câu tiếng Anh trong lĩnh vực tài chính", value=default_text, height=120)
-        if st.button("Phan tich cau", type="primary", disabled=not model_ready):
+        if st.button("Phân tích câu", type="primary", disabled=not model_ready):
             try:
                 result = predict_sentence(model, sentence)
                 label = result["predicted_label"]
-                emoji_map = {"Positive": "Tich cuc", "Neutral": "Trung lap", "Negative": "Tieu cuc"}
+                emoji_map = {"Positive": "Tích cực", "Neutral": "Trung lập", "Negative": "Tiêu cực"}
                 display = emoji_map.get(label, label)
                 color_map = {"Positive": "green", "Neutral": "gray", "Negative": "red"}
                 color = color_map.get(label, "blue")
                 st.markdown(
-                    f"<h3 style='color:{color}'>Ket qua: {display}</h3>",
+                    f"<h3 style='color:{color}'>Kết quả: {display}</h3>",
                     unsafe_allow_html=True,
                 )
                 if result["scores"]:
                     conf = softmax_confidence(result["scores"])
                     conf_df = pd.DataFrame(
-                        [{"Cam xuc": emoji_map.get(k, k), "Do tin cay (%)": v}
+                        [{"Cảm xúc": emoji_map.get(k, k), "Độ tin cậy (%)": v}
                          for k, v in sorted(conf.items(), key=lambda x: -x[1])]
                     )
                     st.caption(
-                        "Do tin cay duoc tinh tu diem phan quyet cua mo hinh (Linear SVM), "
-                        "khong phai xac suat chinh thuc. Gia tri cang cao thi mo hinh cang chac chan ve nhan do."
+                        "Độ tin cậy được tính từ điểm phân quyết của mô hình (Linear SVM), "
+                        "không phải xác suất chính thức. Giá trị càng cao thì mô hình càng chắc chắn về nhãn đó."
                     )
                     st.dataframe(conf_df, width="stretch", hide_index=True)
 
-                    with st.expander("Chi tiet ky thuat"):
+                    with st.expander("Chi tiết kỹ thuật"):
                         st.caption(
-                            "Decision score la diem phan quyet cua LinearSVC truoc khi phan nguong. "
-                            "Gia tri duong va lon hon thi nhan do duoc mo hinh uu tien hon. "
-                            "Day la diem tho, CHUA qua sigmoid/calibration nen khong phai xac suat."
+                            "Decision score là điểm phân quyết của LinearSVC trước khi phân ngưỡng. "
+                            "Giá trị dương và lớn hơn thì nhãn đó được mô hình ưu tiên hơn. "
+                            "Đây là điểm thô, CHƯA qua sigmoid/calibration nên không phải xác suất."
                         )
                         raw_df = pd.DataFrame(
-                            [{"Label (ky thuat)": k, "Decision Score": round(v, 4)}
+                            [{"Nhãn": k, "Decision Score": round(v, 4)}
                              for k, v in sorted(result["scores"].items(), key=lambda x: -x[1])]
                         )
                         st.dataframe(raw_df, width="stretch", hide_index=True)
                         st.markdown(
-                            f"**Mo hinh:** LinearSVC | "
+                            f"**Mô hình:** LinearSVC | "
                             f"**Vectorizer:** TF-IDF unigram+bigram | "
-                            f"**Predicted:** `{label}`"
+                            f"**Nhãn dự đoán:** `{label}`"
                         )
             except Exception as exc:
                 st.warning(str(exc))
 
+    # ── Tab 2: Phân tích PDF ─────────────────────────────────────────────────
     with tab_pdf:
         st.subheader("Phân tích một file PDF")
         uploaded = st.file_uploader("Tải lên PDF có lớp văn bản", type=["pdf"])
@@ -129,46 +131,53 @@ def main() -> None:
             st.write(f"File: `{uploaded.name}` - {uploaded.size / 1024 / 1024:.2f} MB")
         if st.button("Phân tích PDF", type="primary", disabled=(not model_ready or uploaded is None)):
             try:
-                with st.spinner("Dang trich xuat van ban va du doan..."):
+                with st.spinner("Đang trích xuất văn bản và dự đoán..."):
                     df, meta = analyze_pdf(model, uploaded.getvalue())
                 st.success(
-                    f"Da phan tich {meta['sentence_count']:,} cau "
-                    f"tu {meta['page_count']} trang (dung {meta['engine']})."
+                    f"Đã phân tích {meta['sentence_count']:,} câu "
+                    f"từ {meta['page_count']} trang (dùng {meta['engine']})."
                 )
 
-                # --- Summary table (friendly) ---
-                summary_raw = df["predicted_label"].value_counts().rename_axis("predicted_label").reset_index(name="So luong")
-                emoji_map2 = {"Positive": "Tich cuc", "Neutral": "Trung lap", "Negative": "Tieu cuc"}
-                summary_raw["Cam xuc"] = summary_raw["predicted_label"].map(emoji_map2)
-                summary_raw["Ti le (%)"] = (summary_raw["So luong"] / summary_raw["So luong"].sum() * 100).round(1)
-                summary_display = summary_raw[["Cam xuc", "So luong", "Ti le (%)"]]
+                # --- Bảng tóm tắt ---
+                summary_raw = df["predicted_label"].value_counts().rename_axis("predicted_label").reset_index(name="Số lượng")
+                emoji_map2 = {"Positive": "Tích cực", "Neutral": "Trung lập", "Negative": "Tiêu cực"}
+                summary_raw["Cảm xúc"] = summary_raw["predicted_label"].map(emoji_map2)
+                summary_raw["Tỉ lệ (%)"] = (summary_raw["Số lượng"] / summary_raw["Số lượng"].sum() * 100).round(1)
+                summary_display = summary_raw[["Cảm xúc", "Số lượng", "Tỉ lệ (%)"]]
 
                 left, right = st.columns([1, 1])
                 with left:
-                    st.markdown("**Tong hop cam xuc**")
+                    st.markdown("**Tổng hợp cảm xúc**")
                     st.dataframe(summary_display, width="stretch", hide_index=True)
                 with right:
-                    chart_data = summary_raw.set_index("Cam xuc")["So luong"]
+                    chart_data = summary_raw.set_index("Cảm xúc")["Số lượng"]
                     st.bar_chart(chart_data)
 
-                # --- Per-sentence table (friendly) ---
-                st.subheader("Ket qua tung cau")
-                display_cols = ["STT", "Noi dung cau", "Cam xuc", "Do tin cay (%)"]
-                st.dataframe(df[display_cols].head(200), width="stretch", hide_index=True)
+                # --- Bảng từng câu (thân thiện) ---
+                st.subheader("Kết quả từng câu")
+                display_cols = ["STT", "Nội dung câu", "Cảm xúc", "Độ tin cậy (%)"]
+                # Đổi tên cột sang tiếng Việt có dấu để hiển thị
+                df_display = df[["STT", "Noi dung cau", "Cam xuc", "Do tin cay (%)"]].copy()
+                df_display.columns = display_cols
+                st.dataframe(df_display.head(200), width="stretch", hide_index=True)
 
-                with st.expander("Chi tiet ky thuat (day du cot cho nguoi trong nganh)"):
+                with st.expander("Chi tiết kỹ thuật"):
                     st.caption(
-                        "Bang day du bao gom: nhan ky thuat (Negative/Neutral/Positive), "
-                        "do tin cay % (softmax tren decision score), "
-                        "va diem % rieng le cua tung nhan."
+                        "Bảng đầy đủ bao gồm: nhãn kỹ thuật (Negative/Neutral/Positive), "
+                        "độ tin cậy % (softmax trên decision score), "
+                        "và điểm % riêng lẻ của từng nhãn."
                     )
-                    tech_cols = ["STT", "Noi dung cau", "predicted_label",
-                                 "Do tin cay (%)", "Tich cuc (%)", "Trung lap (%)", "Tieu cuc (%)"]
-                    st.dataframe(df[tech_cols].head(200), width="stretch", hide_index=True)
+                    tech_cols_src = ["STT", "Noi dung cau", "predicted_label",
+                                     "Do tin cay (%)", "Tich cuc (%)", "Trung lap (%)", "Tieu cuc (%)"]
+                    tech_cols_display = ["STT", "Nội dung câu", "Nhãn kỹ thuật",
+                                         "Độ tin cậy (%)", "Tích cực (%)", "Trung lập (%)", "Tiêu cực (%)"]
+                    df_tech = df[tech_cols_src].copy()
+                    df_tech.columns = tech_cols_display
+                    st.dataframe(df_tech.head(200), width="stretch", hide_index=True)
 
-                # CSV export keeps all columns for analysis
+                # CSV xuất đầy đủ cột để phân tích
                 st.download_button(
-                    "Tai CSV ket qua",
+                    "Tải CSV kết quả",
                     data=df.to_csv(index=False).encode("utf-8-sig"),
                     file_name="financial_sentiment_predictions.csv",
                     mime="text/csv",
@@ -176,17 +185,19 @@ def main() -> None:
             except Exception as exc:
                 st.warning(str(exc))
 
+    # ── Tab 3: Thông tin mô hình ─────────────────────────────────────────────
     with tab_info:
         st.subheader("Thông tin mô hình")
         show_metadata(metadata)
         st.markdown(
             """
-            **Ghi chu trien khai**
-            - Ung dung tai model mot lan bang `st.cache_resource`.
-            - Khong huan luyen lai model khi nguoi dung truy cap.
-            - PDF scan chua duoc OCR trong phien ban dau.
-            - "Do tin cay" duoc tinh theo softmax tren diem phan quyet cua LinearSVM — la uoc tinh truc quan, khong phai xac suat chinh xac.
-            """)
+            **Ghi chú triển khai**
+            - Ứng dụng tải model một lần bằng `st.cache_resource`.
+            - Không huấn luyện lại model khi người dùng truy cập.
+            - PDF scan chưa được OCR trong phiên bản đầu.
+            - "Độ tin cậy" được tính theo softmax trên điểm phân quyết của LinearSVM — là ước tính trực quan, không phải xác suất chính xác.
+            """
+        )
 
 
 if __name__ == "__main__":

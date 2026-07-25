@@ -21,9 +21,9 @@ LABEL_DISPLAY = {
 }
 
 LABEL_EMOJI = {
-    "Negative": "Tieu cuc",
-    "Neutral": "Trung lap",
-    "Positive": "Tich cuc",
+    "Negative": "Tiêu cực",
+    "Neutral": "Trung lập",
+    "Positive": "Tích cực",
 }
 
 VALID_LABELS = {"Negative", "Neutral", "Positive"}
@@ -162,7 +162,7 @@ def analyze_pdf(model: Any, pdf_bytes: bytes) -> tuple[pd.DataFrame, dict[str, A
             "Tich cuc (%)": conf.get("Positive", 0.0),
             "Trung lap (%)": conf.get("Neutral", 0.0),
             "Tieu cuc (%)": conf.get("Negative", 0.0),
-            # Keep raw label for CSV filtering
+            # Keep raw label for filtering
             "predicted_label": display_label,
         }
         rows.append(row)
