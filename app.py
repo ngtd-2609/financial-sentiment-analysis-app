@@ -17,15 +17,21 @@ ROOT = Path(__file__).parent
 MODEL_PATH = ROOT / "models" / "financial_sentiment_pipeline.joblib"
 METADATA_PATH = ROOT / "models" / "model_metadata.json"
 
+MODEL_VERSION = "logistic_v1"  # Đổi giá trị này để buộc Streamlit Cloud load lại model
+
 
 @st.cache_resource
-def load_model():
+def load_model(_version=MODEL_VERSION):
     if not MODEL_PATH.exists():
         raise FileNotFoundError(
             "Chưa tìm thấy file models/financial_sentiment_pipeline.joblib. "
             "Hãy chạy notebook hoặc scripts/train_export_model.py để xuất model trước khi deploy."
         )
-    return joblib.load(MODEL_PATH)
+    model = joblib.load(MODEL_PATH)
+    # Kiểm tra model có predict_proba (Logistic Regression)
+    if not hasattr(model, "predict_proba"):
+        st.warning("Model hiện tại không hỗ trợ predict_proba. Hãy chạy lại train script.")
+    return model
 
 
 @st.cache_data
