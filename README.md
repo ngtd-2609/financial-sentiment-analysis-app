@@ -125,9 +125,9 @@ PDF scan chưa được hỗ trợ OCR tự động trong phiên bản hiện t�
 
 | Thành viên | Công việc | Tỷ trọng |
 |---|---|---:|
-| Nguyễn Tùng Dương | Dữ liệu, tiền xử lý, EDA và báo cáo | 33% |
+| Nguyễn Tùng Dương | Dữ liệu, tiền xử lý, EDA, Slide và ứng dụng | 33% |
 | Phạm Thế Duy | Xây dựng baseline, huấn luyện, lựa chọn mô hình, đánh giá test, confusion matrix và phân tích lỗi | 33% |
-| Ngô Quang Thiện | Demo ứng dụng, PDF, slide và kiểm tra cuối | 33% |
+| Ngô Quang Thiện | Báo cáo, PDF, kiểm tra cuối | 33% |
 
 ## Tài liệu
 
