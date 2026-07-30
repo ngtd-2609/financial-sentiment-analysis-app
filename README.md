@@ -32,14 +32,22 @@
 Các chỉ số trên được lấy từ kết quả đánh giá mô hình Logistic Regression
 trong notebook của dự án.
 
-## Kiến trúc
+## Kiến trúc hệ thống
 
 ```text
 Financial PhraseBank
-    -> kiểm tra và tiền xử lý
-    -> TF-IDF unigram/bigram
-    -> Logistic Regression
-    -> dự đoán câu tài chính hoặc câu trích từ PDF
+        ↓
+Kiểm tra và tiền xử lý dữ liệu
+        ↓
+TF-IDF unigram/bigram
+        ↓
+Logistic Regression
+        ↓
+Pipeline Joblib
+        ↓
+Ứng dụng Streamlit
+        ↓
+Dự đoán câu tài chính hoặc nội dung PDF
 ```
 
 Ứng dụng Streamlit không huấn luyện lại mô hình khi chạy. App chỉ tải file `models/financial_sentiment_pipeline.joblib` đã được xuất từ notebook hoặc script huấn luyện.
@@ -69,84 +77,16 @@ financial-sentiment-analysis-app/
     └── config.toml
 ```
 
-## Cài đặt local
+## Chạy ứng dụng trên máy
 
 ```bash
 git clone https://github.com/ngtd-2609/financial-sentiment-analysis-app.git
 cd financial-sentiment-analysis-app
-python -m venv .venv
-```
-
-Yêu cầu Python 3.12+ (đã test với Python 3.13.5).
-
-Windows:
-
-```bash
-.venv\Scripts\activate
-```
-
-macOS/Linux:
-
-```bash
-source .venv/bin/activate
-```
-
-Cài thư viện:
-
-```bash
 pip install -r requirements.txt
-```
-
-## Tạo model deploy
-
-Trong môi trường có Internet, chạy:
-
-```bash
-python scripts/train_export_model.py
-```
-
-Lệnh này tải Financial PhraseBank, huấn luyện các baseline, chọn mô hình bằng validation Macro-F1 và lưu:
-
-```text
-models/financial_sentiment_pipeline.joblib
-models/model_metadata.json
-```
-
-Có thể thay bằng cách mở notebook và chạy phần **Xuất mô hình để triển khai Streamlit**.
-
-## Chạy ứng dụng
-
-```bash
 streamlit run app.py
 ```
 
-Mở địa chỉ local thường là:
-
-```text
-http://localhost:8501
-```
-
-## Deploy Streamlit Community Cloud
-
-1. Push repository lên GitHub.
-2. Đăng nhập Streamlit Community Cloud.
-3. Chọn repository.
-4. Chọn branch `main`.
-5. Main file path: `app.py`.
-6. Deploy.
-
-Lệnh GitHub cơ bản:
-
-```bash
-git init
-git add .
-git commit -m "Initial financial sentiment application"
-git branch -M main
-git remote add origin https://github.com/ngtd-2609/financial-sentiment-analysis-app.git
-git push -u origin main
-```
-
-## Cách sử dụng app
+## Cách sử dụng
 
 ### Dự đoán một câu
 
@@ -156,21 +96,19 @@ Nhập một câu tài chính tiếng Anh, ví dụ:
 Revenue increased by 20 percent compared with the previous year.
 ```
 
-Ứng dụng trả về nhãn dự đoán và xác suất của từng lớp. Các xác suất được lấy trực tiếp từ phương thức `predict_proba` của mô hình Logistic Regression.
+Ứng dụng trả về nhãn dự đoán và xác suất của từng lớp.
 
 ### Phân tích PDF
 
-Tải lên một file PDF có lớp văn bản. Ứng dụng sẽ trích xuất câu, dự đoán nhãn từng câu, tổng hợp tỷ lệ nhãn và cho tải CSV kết quả.
+Tải lên một file PDF có lớp văn bản. Ứng dụng sẽ:
 
-PDF scan chưa được OCR trong phiên bản đầu.
+1. Trích xuất nội dung.
+2. Tách văn bản thành các câu phù hợp.
+3. Dự đoán cảm xúc từng câu.
+4. Tổng hợp tỷ lệ các nhãn.
+5. Cho phép tải kết quả CSV.
 
-## Chạy kiểm thử
-
-```bash
-pytest
-```
-
-Nếu chưa có file model joblib, các test liên quan đến model sẽ được skip; các test metadata và xử lý câu vẫn chạy.
+PDF scan chưa được hỗ trợ OCR tự động trong phiên bản hiện tại.
 
 ## Hạn chế
 
@@ -201,12 +139,3 @@ Nếu chưa có file model joblib, các test liên quan đến model sẽ đư�
 ## Ghi chú bản quyền dữ liệu
 
 Mã nguồn do nhóm xây dựng có thể dùng theo MIT License. Dataset Financial PhraseBank và các báo cáo doanh nghiệp có điều khoản sử dụng riêng; repository không tuyên bố sở hữu các nguồn dữ liệu này.
-
-## Hướng dẫn đồng tác giả fork repo
-
-Các thành viên [@duyphamdevx](https://github.com/duyphamdevx) và [@thyelmot](https://github.com/thyelmot) có thể thêm repo này vào GitHub cá nhân bằng cách:
-
-1. Vào trang repo: https://github.com/ngtd-2609/financial-sentiment-analysis-app
-2. Bấm nút **Fork** (góc trên phải)
-3. Chọn tài khoản cá nhân → bấm **Create fork**
-4. Repo sẽ xuất hiện tại `https://github.com/<username>/financial-sentiment-analysis-app`
